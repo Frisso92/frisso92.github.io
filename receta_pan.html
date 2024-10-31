@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receta de Pan Blanco</title>
+    <style>
+        :root {
+            background-color: #0a192f
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #0a192f;
+            color: #ffffff;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 100%;
+            margin: 0 auto;
+            transition: all 0.3s ease;
+        }
+
+        h1 {
+            color: #ffffff;
+            text-align: Left;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            animation: fadeIn 1s ease-out;
+        }
+
+        ol {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 15px;
+            padding: 2px;
+            border-radius: 2px;
+            transition: all 0.1s ease;
+            animation: slideIn 0.3s ease-out;
+            animation-fill-mode: both;
+        }
+
+
+        li:hover {
+            transform: translateX(10px);
+            background-color: #1f3b60;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <section>
+    <h1>Pan Blanco</h1>
+    <ol>
+        <li>En un bol grande, mezclar 500gr de Harina Blanca 000 y 1 cucharada de Azúcar. Tamisar la mezcla.</li>
+        <li>Agregar 4 cucharadas de semillas y mezclar bien.</li>
+        <li>En el recipiente de la panificadora, combinar 100 cm3 de agua tibia, 300 cm3 de leche fría y 4 cucharadas de aceite.</li>
+        <li>Colocar cuidadosamente la mezcla seca sobre los líquidos en el recipiente.</li>
+        <li>Nivelar la superficie y hacer dos hoyitos sin mezclar secos y líquidos.</li>
+        <li>En un hoyito, agregar 1 y 1/2 cucharadita de sal fina. En el otro, 2 cucharaditas de levadura.</li>
+        <li>Tapar los hoyitos con un poco de harina.</li>
+        <li>Colocar el recipiente en la panificadora.</li>
+        <li>Seleccionar: Programa 1, 3 horas, Blanco, Medio, 900 gramos.</li>
+        <li>Durante el proceso, agregar más leche hasta que se unifique todo. Usar una espátula para despegar los bordes si es necesario.</li>
+    </ol>
+</section>
+</body>
+</html>

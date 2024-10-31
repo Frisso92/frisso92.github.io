@@ -6,12 +6,13 @@
     <title>Felipe Risso - Portfolio/Resume</title>
     <style>
         body {
-            background-color: #121212;
+            background-color: #0a0a23;
             color: #ffffff;
             font-family: 'Arial', sans-serif;
             line-height: 1.6;
             margin: 0;
             padding: 0;
+            transition: background-color 0.5s ease, color 0.5s ease;
         }
         .container {
             width: 80%;
@@ -19,50 +20,84 @@
             padding: 20px;
         }
         h1, h2, h3 {
-            color: #ffcc00;
+            color: #00aaff;
         }
         .section {
             margin-bottom: 40px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .section.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
         .section-title {
-            border-bottom: 2px solid #ffcc00;
+            border-bottom: 2px solid #00aaff;
             padding-bottom: 5px;
             margin-bottom: 20px;
         }
-        .contact, .skills, .experience, .education {
-            display: flex;
-            flex-direction: column;
-        }
         .contact a {
-            color: #ffcc00;
+            color: #00aaff;
             text-decoration: none;
+            transition: color 0.3s ease;
         }
-        .skills ul, .experience ul, .education ul {
+        .contact a:hover {
+            color: #ffcc00;
+        }
+        .skills ul, .experience ul, .education ul, .licenses ul {
             list-style-type: none;
             padding: 0;
         }
-        .skills ul li, .experience ul li, .education ul li {
+        .skills ul li, .experience ul li, .education ul li, .licenses ul li {
             margin-bottom: 10px;
+        }
+        .nav-menu {
+            background-color: #0a0a23;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding: 10px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .nav-menu a {
+            color: #ffffff;
+            margin: 0 15px;
+            text-decoration: none;
+            font-size: 18px;
+            transition: color 0.3s ease;
+        }
+        .nav-menu a:hover {
+            color: #00aaff;
         }
     </style>
 </head>
 <body>
+    <div class="nav-menu">
+        <a href="#contact">Contacto</a>
+        <a href="#skills">Habilidades</a>
+        <a href="#experience">Experiencia</a>
+        <a href="#education">Educación</a>
+        <a href="#licenses">Licencias</a>
+    </div>
     <div class="container">
         <header>
             <h1>Felipe Aladdin Risso</h1>
             <p>Técnico Electromecánico, Futuro Ingeniero</p>
         </header>
 
-        <section class="contact section">
+        <section id="contact" class="contact section">
             <h2 class="section-title">Contacto</h2>
-            <p>Dirección: 801 Av. Alvear, Benavidez, Tigre</p>
+            <p>Buenos Aires, Argentina</p>
             <p>CUIL: 20-47068521-3</p>
             <p>Email: <a href="mailto:felipearisso2005@gmail.com">felipearisso2005@gmail.com</a></p>
-            <p>LinkedIn: <a href="https://www.linkedin.com/in/FelipeRisso" target="_blank">FelipeRisso</a></p>
+            <p>LinkedIn: <a href="https://www.linkedin.com/in/felipe-risso-974249300" target="_blank">Felipe Risso</a></p>
             <p>Disponibilidad: Medio Tiempo (20-25hs Semanales)</p>
         </section>
 
-        <section class="skills section">
+        <section id="skills" class="skills section">
             <h2 class="section-title">Idiomas</h2>
             <p>Español - Nativo</p>
             <p>Inglés - B2</p>
@@ -83,7 +118,7 @@
             </ul>
         </section>
 
-        <section class="experience section">
+        <section id="experience" class="experience section">
             <h2 class="section-title">Experiencia</h2>
             <h3>Planta Pacheco, Ford Argentina | Abril 2024 - Diciembre 2024</h3>
             <p>Pasantede Montaje | Lanzamiento e Innovación</p>
@@ -95,7 +130,7 @@
             </ul>
         </section>
 
-        <section class="education section">
+        <section id="education" class="education section">
             <h2 class="section-title">Educación</h2>
             <h3>Escuela Técnica Henry Ford | 2018 - 2024</h3>
             <p>Técnico Electromecánico</p>
@@ -111,7 +146,7 @@
             </ul>
         </section>
 
-        <section class="licenses section">
+        <section id="licenses" class="licenses section">
             <h2 class="section-title">Licencias y Certificaciones</h2>
             <ul>
                 <li>B2 First, Cambridge International Education | Enero 2023</li>
@@ -119,5 +154,24 @@
             </ul>
         </section>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.section');
+            const options = {
+                threshold: 0.1
+            };
+            const observer = new IntersectionObserver(function(entries, observer) {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, options);
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>
 </body>
 </html>

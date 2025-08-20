@@ -72,9 +72,8 @@ function initPlanSelector() {
 
     planSelect.addEventListener('change', handlePlanChange);
 }
-
+// Actualiza tu función handlePlanChange para mostrar el botón
 async function handlePlanChange() {
-    console.log(planSelect.value);
     const selectedPlanId = this.value;
     const selectedPlan = planesConfig.find(plan => plan.id === selectedPlanId);
 
@@ -84,6 +83,9 @@ async function handlePlanChange() {
         planTitle.textContent = selectedPlan.nombre;
         content.classList.add('visible');
 
+        // Mostrar el botón de exportar PDF
+        const exportBtn = document.getElementById('export-pdf-btn');
+        exportBtn.style.display = 'block';
 
         const diagramLoading = document.getElementById('diagram-loading');
         const levelsContainer = document.getElementById('levels-container');
@@ -93,25 +95,26 @@ async function handlePlanChange() {
     } else {
         resetInterface();
         return;
-
     }
 
     const planConfig = planesConfig.find(p => p.id === selectedPlanId);
     currentPlan = planConfig;
     completed.clear();
 
-
-
     await loadPlan(planConfig.archivo);
-
-
 }
 
+
+// Actualiza resetInterface para ocultar el botón
 function resetInterface() {
     planTitle.textContent = 'Plan de Estudios';
     planSelector.classList.remove('minimized');
     planSelect.classList.remove('minimized');
     content.classList.remove('visible');
+
+    // Ocultar el botón de exportar PDF
+    const exportBtn = document.getElementById('export-pdf-btn');
+    exportBtn.style.display = 'none';
 }
 
 // Función para resetear todo el progreso
@@ -122,20 +125,20 @@ function resetAllProgress() {
         'Esto hará lo siguiente:\n' +
         '• Desmarcará todas las materias completadas\n' +
         '• Moverá todas las materias al área "Sin asignar"\n' +
-        '• Eliminará todos los niveles creados\n\n' +
+        '• Eliminará todos los periodos creados\n\n' +
         'Esta acción no se puede deshacer.'
     );
-    
+
     if (!confirmation) {
         return;
     }
-    
+
     console.log('Resetting all progress...');
-    
+
     // 1. Limpiar todas las materias completadas
     completed.clear();
-    
-    // 2. Resetear los niveles - solo dejar el área sin asignar con todas las materias
+
+    // 2. Resetear los periodos - solo dejar el área sin asignar con todas las materias
     levels.length = 0;
     levels.push({
         id: 'unassigned',
@@ -144,15 +147,15 @@ function resetAllProgress() {
         collapsed: false,
         isUnassigned: true
     });
-    
+
     // 3. Actualizar todas las vistas
     updateAvailable();
     updateStats();
     renderMaterias();
     renderDiagram();
-    
+
     console.log('Reset completed successfully');
-    
+
     // Mostrar mensaje de confirmación
     showResetMessage();
 }
@@ -167,7 +170,7 @@ function showResetMessage() {
             ✅ Reset completado exitosamente
         </div>
     `;
-    
+
     // Agregar estilos inline para la notificación
     notification.style.cssText = `
         position: fixed;
@@ -183,9 +186,9 @@ function showResetMessage() {
         animation: slideIn 0.3s ease-out;
         backdrop-filter: blur(10px);
     `;
-    
+
     document.body.appendChild(notification);
-    
+
     // Remover la notificación después de 3 segundos
     setTimeout(() => {
         notification.style.animation = 'slideOut 0.3s ease-in';
@@ -282,9 +285,10 @@ function toggleMateriaCompletion(codigo, isChecked) {
 
     updateAvailable();
     updateStats();
-
     renderMaterias();
 
+    // Re-ordenar todos los niveles después del cambio
+    reorderAllLevels();
 
     if (levels.length > 0) {
         renderDiagram();
@@ -429,14 +433,16 @@ const diagramLoading = document.getElementById('diagram-loading');
 function initDiagramControls() {
     const addLevelBtn = document.getElementById('add-level-btn');
     addLevelBtn.addEventListener('click', addLevel);
-    
-    // Add the auto-distribute button listener
+
     const autoDistributeBtn = document.getElementById('auto-distribute-btn');
     autoDistributeBtn.addEventListener('click', autoDistributeMaterias);
-    
-    // Add the reset button listener
+
     const resetBtn = document.getElementById('reset-btn');
     resetBtn.addEventListener('click', resetAllProgress);
+
+    // Agregar listener para el botón de exportar PDF
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    exportPdfBtn.addEventListener('click', exportToPDF);
 }
 
 
@@ -457,7 +463,7 @@ function initDiagram() {
 }
 
 function autoOrganizeInitialLevels() {
-    // Materias sin prerrequisitos van al primer nivel
+    // Materias sin prerrequisitos van al primer periodo
     const materiasLevel1 = materias.filter(m => m.prereqs.length === 0);
     levels[0].materias = materiasLevel1.map(m => m.codigo);
 
@@ -500,6 +506,9 @@ function createLevelElement(level) {
 
     if (level.isUnassigned) {
         const unassignedStats = getUnassignedStats(level);
+        // Ordenar materias en el área sin asignar también
+        const sortedMaterias = sortMateriasByStatus(level.materias);
+
         levelDiv.classList.add('unassigned-area');
         levelDiv.innerHTML = `
             <div class="unassigned-header">
@@ -507,12 +516,15 @@ function createLevelElement(level) {
                 <span class="level-stats">${unassignedStats.total} materias • ${unassignedStats.totalCarga}h</span>
             </div>
             <div class="unassigned-content" data-level-id="${level.id}">
-                ${level.materias.map(codigo => createMateriaNode(codigo)).join('')}
+                ${sortedMaterias.map(codigo => createMateriaNode(codigo)).join('')}
             </div>
         `;
     } else {
         const stats = getLevelStats(level);
         const allCompleted = stats.total > 0 && stats.completed === stats.total;
+
+        // Ordenar materias por estado
+        const sortedMaterias = sortMateriasByStatus(level.materias);
 
         levelDiv.innerHTML = `
             <div class="level-header ${level.collapsed ? 'collapsed' : ''}">
@@ -531,7 +543,7 @@ function createLevelElement(level) {
                 <button class="level-remove" onclick="removeLevel('${level.id}')">🗑️</button>
             </div>
             <div class="level-content ${level.collapsed ? 'collapsed' : ''}" data-level-id="${level.id}">
-                ${level.materias.map(codigo => createMateriaNode(codigo)).join('')}
+                ${sortedMaterias.map(codigo => createMateriaNode(codigo)).join('')}
             </div>
         `;
 
@@ -545,6 +557,55 @@ function createLevelElement(level) {
     setupDropZone(content);
 
     return levelDiv;
+}
+
+// Función para ordenar materias por estado
+function sortMateriasByStatus(materiasCodigos) {
+    const materiasWithStatus = materiasCodigos.map(codigo => {
+        const materia = materias.find(m => m.codigo === codigo);
+        if (!materia) return null;
+
+        const status = getMateriaStatus(materia);
+        return {
+            codigo: codigo,
+            materia: materia,
+            status: status,
+            nombre: materia.nombre,
+            cargaHoraria: materia.cargaHoraria || 0
+        };
+    }).filter(item => item !== null);
+
+    // Definir el orden de prioridad
+    const statusPriority = {
+        'available': 1,    // Disponibles primero
+        'blocked': 2,      // Bloqueadas segundo
+        'completed': 3,    // Completadas tercero
+        'unassigned': 4    // Sin asignar último
+    };
+
+    // Ordenar por estado, luego por nombre alfabéticamente
+    materiasWithStatus.sort((a, b) => {
+        const priorityA = statusPriority[a.status] || 5;
+        const priorityB = statusPriority[b.status] || 5;
+
+        // Primero por prioridad de estado
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB;
+        }
+
+        // Si tienen el mismo estado, ordenar alfabéticamente por nombre
+        return a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
+    });
+
+    return materiasWithStatus.map(item => item.codigo);
+}
+
+function reorderAllLevels() {
+    levels.forEach(level => {
+        if (level.materias.length > 0) {
+            level.materias = sortMateriasByStatus(level.materias);
+        }
+    });
 }
 
 function createMateriaNode(codigo) {
@@ -578,7 +639,7 @@ function getMateriaStatus(materia) {
     const canTake = materia.prereqs.every(prereq => completed.has(prereq));
     if (canTake) return 'available';
 
-    // Verificar si está en un nivel asignado
+    // Verificar si está en un periodo asignado
     const isAssigned = levels.some(level =>
         !level.isUnassigned && level.materias.includes(materia.codigo)
     );
@@ -684,17 +745,19 @@ function moveMateria(codigo, targetLevelId) {
     const targetLevel = levels.find(level => level.id === targetLevelId);
     if (targetLevel) {
         targetLevel.materias.push(codigo);
+        // Re-ordenar el nivel destino
+        targetLevel.materias = sortMateriasByStatus(targetLevel.materias);
     }
 
     renderDiagram();
 }
 
-// Funciones de control de niveles
+// Funciones de control de periodos
 function addLevel() {
     const levelNumber = levels.filter(l => !l.isUnassigned).length + 1;
     const newLevel = {
         id: `level-${Date.now()}`,
-        name: `Nivel ${levelNumber}`,
+        name: `Periodo ${levelNumber}`,
         materias: [],
         collapsed: false
     };
@@ -711,7 +774,7 @@ function addLevel() {
 }
 
 function removeLevel(levelId) {
-    if (confirm('¿Estás seguro de que quieres eliminar este nivel? Las materias se moverán al área sin asignar.')) {
+    if (confirm('¿Estás seguro de que quieres eliminar este periodo? Las materias se moverán al área sin asignar.')) {
         const levelIndex = levels.findIndex(l => l.id === levelId);
         if (levelIndex > -1) {
             const level = levels[levelIndex];
@@ -1079,7 +1142,7 @@ function greedyWithPriorityScoring(maxMaterias, maxCarga, depGraph, reverseDepGr
 
         distribution.push({
             id: `level-${levelNumber}`,
-            name: `Nivel ${levelNumber}`,
+            name: `Periodo ${levelNumber}`,
             materias: levelMaterias,
             collapsed: false
         });
@@ -1110,7 +1173,7 @@ function levelByLevelOptimization(maxMaterias, maxCarga, depGraph, reverseDepGra
 
         distribution.push({
             id: `level-${levelNumber}`,
-            name: `Nivel ${levelNumber}`,
+            name: `Periodo ${levelNumber}`,
             materias: bestCombination,
             collapsed: false
         });
@@ -1153,7 +1216,7 @@ function backtrackOptimization(maxMaterias, maxCarga, depGraph) {
             const newRemaining = remainingMaterias.filter(m => !combination.includes(m.codigo));
             const newLevel = {
                 id: `level-${currentDistribution.length + 1}`,
-                name: `Nivel ${currentDistribution.length + 1}`,
+                name: `Periodo ${currentDistribution.length + 1}`,
                 materias: combination,
                 collapsed: false
             };
@@ -1393,4 +1456,438 @@ function applyDistribution(distribution) {
         }, 0);
         console.log(`  Level ${i + 1}: ${level.materias.length} materias, ${totalCarga}h`);
     });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Función principal
+async function exportToPDF() {
+    if (!currentPlan) {
+        alert('Por favor selecciona un plan de estudios primero');
+        return;
+    }
+
+    const exportBtn = document.getElementById('export-pdf-btn');
+    const originalText = exportBtn.innerHTML;
+
+    try {
+        exportBtn.innerHTML = '⏳ Creando contenido...';
+        exportBtn.disabled = true;
+
+        // Crear el contenedor para el PDF
+        const pdfContainer = createPDFContainer();
+
+        // Debug: verificar que el contenedor tenga contenido
+        console.log('PDF Container content:', pdfContainer.innerHTML.length);
+        console.log('PDF Container:', pdfContainer);
+
+        // Agregar al DOM de manera visible temporalmente para debugging
+        pdfContainer.style.position = 'fixed';
+        pdfContainer.style.top = '0';
+        pdfContainer.style.left = '50%';
+        pdfContainer.style.transform = 'translate(-43%, 0)';
+        pdfContainer.style.zIndex = '10000';
+        pdfContainer.style.backgroundColor = 'white';
+        pdfContainer.style.width = '1200px';
+        pdfContainer.style.height = 'auto';
+        pdfContainer.style.overflow = 'visible';
+
+
+        document.body.appendChild(pdfContainer);
+
+        // Esperar un momento para que se renderice
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        exportBtn.innerHTML = '⏳ Generando PDF...';
+
+        // Verificar que el contenedor sea visible
+        const rect = pdfContainer.getBoundingClientRect();
+        console.log('Container dimensions:', rect);
+
+        if (rect.width === 0 || rect.height === 0) {
+            throw new Error('El contenedor del PDF no tiene dimensiones válidas');
+        }
+
+        // Generar el PDF
+        await generatePDF(pdfContainer);
+
+        // Limpiar
+        document.body.removeChild(pdfContainer);
+
+        showSuccessNotification('PDF generado exitosamente');
+
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert(`Error al generar el PDF: ${error.message}`);
+    } finally {
+        exportBtn.innerHTML = originalText;
+        exportBtn.disabled = false;
+    }
+}
+
+
+// Crear el contenedor con el contenido del PDF
+function createPDFContainer() {
+    const container = document.createElement('div');
+    container.className = 'pdf-container';
+
+    // Asegurar estilos inline para compatibilidad
+    container.style.cssText = `
+    background: white;
+    color: #333;
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    width: 800px;  // Reduced from 1200px
+    min-height: 600px;
+    box-sizing: border-box;
+    display: block;
+    visibility: visible;
+    position: relative;
+`;
+
+    // Verificar que tenemos datos
+    if (!currentPlan || !materias || materias.length === 0) {
+        container.innerHTML = '<h1>Error: No hay datos para generar el PDF</h1>';
+        return container;
+    }
+
+    // Header del PDF
+    const header = document.createElement('div');
+    header.style.cssText = `
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 3px solid #6f42c1;
+        padding-bottom: 20px;
+    `;
+    header.innerHTML = `
+        <h1 style="font-size: 28px; font-weight: bold; color: #6f42c1; margin-bottom: 10px; margin-top: 0;">
+            FLOWBOX - Plan de Estudios
+        </h1>
+        <h2 style="font-size: 18px; color: #666; margin: 0;">
+            ${currentPlan.nombre}
+        </h2>
+    `;
+    container.appendChild(header);
+
+    // Estadísticas
+    const stats = createPDFStatsInline();
+    container.appendChild(stats);
+
+    // Diagrama
+    const diagram = createPDFDiagramInline();
+    container.appendChild(diagram);
+
+    // Footer
+    const footer = document.createElement('div');
+    footer.style.cssText = `
+        margin-top: 30px;
+        text-align: center;
+        color: #6c757d;
+        font-size: 12px;
+        border-top: 1px solid #e0e0e0;
+        padding-top: 15px;
+    `;
+    footer.innerHTML = `
+        Generado el ${new Date().toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    })} - Flowbox
+    `;
+    container.appendChild(footer);
+
+    return container;
+}
+
+// Estadísticas con estilos inline
+function createPDFStatsInline() {
+    const statsDiv = document.createElement('div');
+    statsDiv.style.cssText = `
+        display: flex;
+        justify-content: space-around;
+        margin: 20px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    `;
+
+    const totalMaterias = materias.length;
+    const completedSize = completed.size;
+    const availableSize = materias.filter(m =>
+        !completed.has(m.codigo) && m.prereqs.every(p => completed.has(p))
+    ).length;
+
+    const totalCarga = materias.reduce((sum, m) => sum + (m.cargaHoraria || 0), 0);
+    const completedCarga = materias.reduce((sum, m) => {
+        if (completed.has(m.codigo)) {
+            return sum + (m.cargaHoraria || 0);
+        }
+        return sum;
+    }, 0);
+
+    const progress = totalMaterias > 0 ? (completedSize / totalMaterias) * 100 : 0;
+
+    const statsData = [
+        { value: totalMaterias, label: 'Total Materias' },
+        { value: completedSize, label: 'Completadas' },
+        { value: availableSize, label: 'Disponibles' },
+        { value: `${progress.toFixed(1)}%`, label: 'Progreso' },
+        { value: `${totalCarga}h`, label: 'Carga Total' },
+        { value: `${completedCarga}h`, label: 'Carga Completada' }
+    ];
+
+    statsData.forEach(stat => {
+        const statDiv = document.createElement('div');
+        statDiv.style.textAlign = 'center';
+        statDiv.innerHTML = `
+            <div style="font-size: 18px; font-weight: bold; color: #6f42c1;">${stat.value}</div>
+            <div style="font-size: 12px; color: #6c757d;">${stat.label}</div>
+        `;
+        statsDiv.appendChild(statDiv);
+    });
+
+    return statsDiv;
+}
+
+// Diagrama con estilos inline
+function createPDFDiagramInline() {
+    const diagramDiv = document.createElement('div');
+    diagramDiv.style.marginTop = '20px';
+
+    if (!levels || levels.length === 0) {
+        diagramDiv.innerHTML = '<p>No hay niveles para mostrar</p>';
+        return diagramDiv;
+    }
+
+    levels.forEach(level => {
+        if (!level.materias || level.materias.length === 0) return;
+
+        const levelDiv = document.createElement('div');
+        levelDiv.style.cssText = `
+            margin-bottom: 25px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        `;
+
+        // Header del nivel
+        const levelHeader = document.createElement('div');
+        levelHeader.style.cssText = `
+            background: #f8f9fa;
+            padding: 12px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+        `;
+
+        if (level.isUnassigned) {
+            const stats = getUnassignedStats(level);
+            levelHeader.textContent = `📦 ${level.name} - ${stats.total} materias • ${stats.totalCarga}h`;
+        } else {
+            const stats = getLevelStats(level);
+            levelHeader.textContent = `${level.name} - ${stats.total} materias • ${stats.totalCarga}h (${stats.completed} completadas • ${stats.completedCarga}h)`;
+        }
+
+        // Contenido del nivel
+        const levelContent = document.createElement('div');
+        levelContent.style.cssText = `
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+        `;
+
+        const sortedMaterias = sortMateriasByStatus(level.materias);
+
+        sortedMaterias.forEach(codigo => {
+            const materia = materias.find(m => m.codigo === codigo);
+            if (!materia) return;
+
+            const status = getMateriaStatus(materia);
+            const materiaDiv = document.createElement('div');
+
+            let bgColor = '#f8f9fa';
+            let borderColor = '#dee2e6';
+            if (status === 'completed') {
+                bgColor = '#d4edda';
+                borderColor = '#c3e6cb';
+            } else if (status === 'available') {
+                bgColor = '#fff3cd';
+                borderColor = '#ffeaa7';
+            } else if (status === 'blocked') {
+                bgColor = '#f8d7da';
+                borderColor = '#f5c6cb';
+            }
+
+            materiaDiv.style.cssText = `
+                background: ${bgColor};
+                border: 1px solid ${borderColor};
+                border-radius: 6px;
+                padding: 12px;
+                font-size: 12px;
+            `;
+
+            materiaDiv.innerHTML = `
+                <div style="font-weight: bold; color: #495057; margin-bottom: 4px;">${codigo}</div>
+                <div style="color: #6c757d; margin-bottom: 4px;">${materia.nombre}</div>
+                ${materia.cargaHoraria ? `<div style="color: #868e96; font-size: 11px;">${materia.cargaHoraria}h</div>` : ''}
+            `;
+
+            levelContent.appendChild(materiaDiv);
+        });
+
+        levelDiv.appendChild(levelHeader);
+        levelDiv.appendChild(levelContent);
+        diagramDiv.appendChild(levelDiv);
+    });
+
+    return diagramDiv;
+}
+
+
+// Función para mostrar notificación de éxito
+function showSuccessNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'success-notification';
+    notification.innerHTML = `
+        <div class="notification-content">
+            ✅ ${message}
+        </div>
+    `;
+
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(45deg, #28a745, #20c997);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        font-weight: bold;
+        animation: slideIn 0.3s ease-out;
+    `;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Generar PDF usando html2pdf.js (texto seleccionable y alta resolución)
+async function generatePDF(container) {
+    // Método 1: Usar html2pdf.js si está disponible
+    if (typeof html2pdf !== 'undefined') {
+        const options = {
+            margin: 0.5,
+            filename: `${currentPlan.nombre.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
+            image: {
+                type: 'jpeg',
+                quality: 0.98
+            },
+            html2canvas: {
+                scale: 2,
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                logging: true, // Activar logging para debug
+                width: container.offsetWidth,
+                height: container.offsetHeight,
+                scrollX: 0,
+                scrollY: 0
+            },
+            jsPDF: {
+                unit: 'in',
+                format: 'a4',
+                orientation: 'landscape'
+            }
+        };
+
+        return html2pdf().set(options).from(container).save();
+    }
+
+    // Método 2: Fallback con html2canvas + jsPDF
+    else if (typeof html2canvas !== 'undefined' && typeof window.jspdf !== 'undefined') {
+        console.log('Using html2canvas + jsPDF fallback');
+
+        const canvas = await html2canvas(container, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: '#ffffff',
+            logging: true,
+            width: container.offsetWidth,
+            height: container.offsetHeight,
+            scrollX: 0,
+            scrollY: 0,
+            onclone: function (clonedDoc) {
+                // Asegurar que los estilos se copien correctamente
+                const clonedContainer = clonedDoc.querySelector('.pdf-container');
+                if (clonedContainer) {
+                    clonedContainer.style.display = 'block';
+                    clonedContainer.style.visibility = 'visible';
+                }
+            }
+        });
+
+        if (canvas.width === 0 || canvas.height === 0) {
+            throw new Error('El canvas generado está vacío');
+        }
+
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('landscape', 'mm', 'a4');
+
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+
+        const imgWidth = pageWidth - 20;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        let finalWidth = imgWidth;
+        let finalHeight = imgHeight;
+
+        if (imgHeight > pageHeight - 20) {
+            finalHeight = pageHeight - 20;
+            finalWidth = (canvas.width * finalHeight) / canvas.height;
+        }
+
+        const x = (pageWidth - finalWidth) / 2;
+        const y = (pageHeight - finalHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, y, finalWidth, finalHeight);
+
+        const fileName = `${currentPlan.nombre.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+        pdf.save(fileName);
+    }
+
+    else {
+        throw new Error('No se encontraron las librerías necesarias para generar PDF');
+    }
 }

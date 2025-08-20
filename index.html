@@ -6,12 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flowbox</title>
     <link rel="stylesheet" type="text/css" href="./css/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 </head>
 
 <body>
     <div class="header">
         <h1>FLOWBOX 🌀</h1>
         <p id="plan-title">Plan de Estudios</p>
+    </div>
+
+    <div class="header-right">
+        <button id="export-pdf-btn" class="export-btn" style="display: none;" title="Exportar diagrama a PDF">
+            📄 Exportar PDF
+        </button>
     </div>
 
     <div class="plan-selector" id="plan-selector">
@@ -63,7 +71,7 @@
         <div class="view-container" id="diagram-view">
             <div class="diagram-controls">
                 <div class="controls-left">
-                    <button id="add-level-btn" title="Agregar Nivel">➕ Nivel</button>
+                    <button id="add-level-btn" title="Agregar Periodo">➕ Periodo</button>
                 </div>
                 <div class="legend">
                     <span class="legend-item completed">Completadas</span>
@@ -77,11 +85,11 @@
                 <div class="controls-row">
                     <div class="controls-left">
                         <div class="control-group">
-                            <label for="max-materias-per-level">Máximo de materias por nivel:</label>
+                            <label for="max-materias-per-level">Máximo de materias por periodo:</label>
                             <input type="number" id="max-materias-per-level" min="1" max="20" value="6">
                         </div>
                         <div class="control-group">
-                            <label for="max-carga-per-level">Máxima carga horaria por nivel:</label>
+                            <label for="max-carga-per-level">Máxima carga horaria por periodo:</label>
                             <input type="number" id="max-carga-per-level" min="50" max="1000" step="50" value="300">
                         </div>
                         <button id="auto-distribute-btn" class="distribute-btn">🔄 Distribuir Automáticamente</button>
